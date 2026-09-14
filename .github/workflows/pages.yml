@@ -18,48 +18,27 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout preview repository
+      - name: Checkout private website source
         uses: actions/checkout@v4
+        with:
+          repository: floriseibold-create/phobiezentrum-website
+          ref: main
+          token: ${{ secrets.SOURCE_REPO_TOKEN }}
+          path: source
 
-      - name: Mirror current preview
+      - name: Build website
+        working-directory: source
         run: |
-          set -euxo pipefail
-          rm -rf site
-          mkdir -p site
-          wget \
-            --recursive \
-            --level=inf \
-            --page-requisites \
-            --convert-links \
-            --adjust-extension \
-            --no-parent \
-            --no-host-directories \
-            --directory-prefix=site \
-            --execute robots=off \
-            https://mareika.netlify.app/
+          npm run build
+          BASE_PATH=phobiezentrum-preview node pages-prepare.js
 
-          # GitHub Pages should serve the mirrored files as-is.
-          touch site/.nojekyll
-
-          # Preview must not be indexed by search engines.
-          cat > site/robots.txt <<'EOF'
+      - name: Ensure preview stays out of search engines
+        run: |
+          cat > source/dist/robots.txt <<'EOF'
           User-agent: *
           Disallow: /
           EOF
-
-          # Belt-and-suspenders: add noindex to any mirrored HTML that lacks it.
-          python3 - <<'PY'
-          from pathlib import Path
-          marker = '<meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex">'
-          for p in Path('site').rglob('*.html'):
-              text = p.read_text(encoding='utf-8', errors='ignore')
-              if 'name="robots"' not in text.lower():
-                  text = text.replace('<head>', '<head>' + marker, 1)
-                  p.write_text(text, encoding='utf-8')
-          PY
-
-          echo 'Mirrored files:'
-          find site -maxdepth 3 -type f | sort | head -200
+          touch source/dist/.nojekyll
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -67,7 +46,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: source/dist
 
   deploy:
     environment:
