@@ -1,3 +1,3 @@
 # Phobiezentrum Vorschau
 
-Dieses Repository enthält nur die veröffentlichte Vorschau der Website.
+Dieses Repository veröffentlicht ausschließlich die GitHub-Pages-Vorschau der Website. Die Quelle liegt im privaten Repository `phobiezentrum-website`.
