@@ -34,12 +34,35 @@ jobs:
           npm run build
           BASE_PATH=phobiezentrum-preview node pages-prepare.js
 
-      - name: Ensure preview stays out of search engines
+      - name: Protect preview and block indexing
         run: |
+          cp source/preview-gate.js source/dist/preview-gate.js
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          marker = 'data-preview-protection="true"'
+          protection = '''<meta data-preview-protection="true" name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
+          <meta name="googlebot" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
+          <meta name="bingbot" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
+          <script defer src="/phobiezentrum-preview/preview-gate.js"></script>'''
+
+          for html in Path('source/dist').rglob('*.html'):
+              text = html.read_text(encoding='utf-8')
+              if marker in text:
+                  continue
+              if '</head>' in text:
+                  text = text.replace('</head>', protection + '\n</head>', 1)
+              else:
+                  text = protection + '\n' + text
+              html.write_text(text, encoding='utf-8')
+          PY
+
           cat > source/dist/robots.txt <<'EOF'
           User-agent: *
           Disallow: /
           EOF
+
           touch source/dist/.nojekyll
 
       - name: Setup Pages
